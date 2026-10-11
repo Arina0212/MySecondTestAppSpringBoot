@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import ru.urfu.MySecondTestAppSpringBoot.exception.UnsupportedCodeException;
 import ru.urfu.MySecondTestAppSpringBoot.exception.ValidationFailedException;
 import ru.urfu.MySecondTestAppSpringBoot.model.*;
+import ru.urfu.MySecondTestAppSpringBoot.service.ModifyRequestService;
 import ru.urfu.MySecondTestAppSpringBoot.service.ModifyResponseService;
 import ru.urfu.MySecondTestAppSpringBoot.service.ValidationService;
 import ru.urfu.MySecondTestAppSpringBoot.util.DateTimeUtil;
@@ -25,20 +26,25 @@ public class MyController {
 
     private final ValidationService validationService;
     private final ModifyResponseService modifyResponseService;
+    private final ModifyRequestService modifySourceRequestService;
+    private final ModifyRequestService modifySystemNameRequestService;
 
     @Autowired
     public MyController(ValidationService validationService,
-                        @Qualifier("ModifySystemTimeResponseService")ModifyResponseService modifyResponseService) {
+                        @Qualifier("ModifySystemTimeResponseService") ModifyResponseService modifyResponseService,
+                        @Qualifier("ModifySourceRequestService") ModifyRequestService modifySourceRequestService,
+                        @Qualifier("ModifySystemNameRequestService") ModifyRequestService modifySystemNameRequestService) {
         this.validationService = validationService;
         this.modifyResponseService = modifyResponseService;
+        this.modifySourceRequestService = modifySourceRequestService;
+        this.modifySystemNameRequestService = modifySystemNameRequestService;
     }
 
     @PostMapping(value = "/feedback")
     public ResponseEntity<Response> feedback(@Valid @RequestBody Request request,
                                              BindingResult bindingResult) {
+        request.setSystemTime(DateTimeUtil.getCustomFormat().format(new Date()));
         log.info("request: {}", request);
-
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 
         Response response = Response.builder()
                 .uid(request.getUid())
@@ -74,6 +80,8 @@ public class MyController {
         }
         log.info("response до модификации: {}", response);
         Response modifiedResponse = modifyResponseService.modify(response);
+        modifySourceRequestService.modify(request);
+        modifySystemNameRequestService.modify(request);
         log.info("response после модификации: {}", modifiedResponse);
 
         return new ResponseEntity<>(modifiedResponse, HttpStatus.OK);
